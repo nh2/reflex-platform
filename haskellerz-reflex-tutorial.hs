@@ -22,6 +22,7 @@ import           Control.Monad.IO.Class
 import           Data.Default (def)
 import           Data.Monoid
 import           Data.Text (Text)
+import qualified Data.Text as T
 -- GHCJS specific imports
 import           GHCJS.Types (JSString)
 import           GHCJS.DOM.Types (toJSString)
@@ -52,7 +53,7 @@ foreign import javascript unsafe
 main :: IO ()
 main = mainWidget myWidgets
 
-myWidgets :: (MonadWidget t m) => m ()
+myWidgets :: forall t m . (MonadWidget t m) => m ()
 myWidgets = do
   elAttr
     "link"
@@ -133,3 +134,23 @@ myWidgets = do
     -- containing various Events and Dynamics other parts of
     -- the code can react to, is a nice and composable design
     -- approach to GUI programming.
+
+  tutorialSection $ do
+    -- Attaching values to events part 2:
+    --   Attaching the current value of a Dynamic value
+    --   to an Event, when that event happens.
+    --
+    -- Example: We have a text box (whose events happen
+    -- on every key press), but we want an Event to occur
+    -- only when the submit button is clicked, and we want
+    -- that event to carry the current value of the text box.
+    text "What food would you like to order? "
+    foodInputDyn <- _textInput_value <$> textInput def
+    buttonEv <- button "Order"
+
+    let foodOrderEv :: Event t Text
+        foodOrderEv = tagPromptlyDyn foodInputDyn buttonEv
+
+    alertEvent
+      (\food -> "Ordered: " ++ T.unpack food)
+      foodOrderEv
