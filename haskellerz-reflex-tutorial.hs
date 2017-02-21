@@ -16,7 +16,34 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
 
+import           Data.Monoid
+
 import           Reflex.Dom
 
+
+tutorialSection :: (MonadWidget t m) => m () -> m ()
+tutorialSection widgets = divClass "tutorial-section" widgets
+
+
 main :: IO ()
-main = mainWidget $ text "Hello, world!"
+main = mainWidget $ do
+  elAttr
+    "link"
+    ("href" =: "../haskellerz-reflex-tutorial.css" <>
+     "rel" =: "stylesheet" <>
+     "type" =: "text/css"
+    ) $ return ()
+
+  tutorialSection $ do
+    text "Hello, world!"
+
+  tutorialSection $ do
+    text "We now have different tutorial sections."
+
+    -- Nested HTML elements.
+    el "p" (el "span" (text "Text in a span in a paragraph."))
+
+    -- Nested HTML elements, monadic style.
+    el "p" $ do
+      el "span" $ do
+        text "Text in a span in a paragraph."
