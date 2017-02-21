@@ -82,3 +82,21 @@ myWidgets = do
     alertEvent
       (\val -> "The button was clicked; the event contained: " ++ show val)
       buttonEv
+
+  tutorialSection $ do
+    -- Attaching values to events part 1:
+    --   Pure values that are in scope.
+    --
+    -- We modify `Event`s purely via their `Functor`
+    -- interface (using `fmap` or `<$>`).
+    let myval = 5
+
+    buttonEv :: Event t () <- button "Submit (value in scope)"
+
+    let buttonEvWithLocalVal :: Event t Int
+        buttonEvWithLocalVal = fmap (\() -> myval) buttonEv
+     -- buttonEvWithLocalVal = (\() -> myval) <$> buttonEv
+
+    alertEvent
+      (\val -> "The button was clicked; the event contained: " ++ show val)
+      buttonEvWithLocalVal
