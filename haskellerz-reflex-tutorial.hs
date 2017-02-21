@@ -19,7 +19,9 @@
 
 -- Library imports
 import           Control.Monad.IO.Class
+import           Data.Default (def)
 import           Data.Monoid
+import           Data.Text (Text)
 -- GHCJS specific imports
 import           GHCJS.Types (JSString)
 import           GHCJS.DOM.Types (toJSString)
@@ -100,3 +102,34 @@ myWidgets = do
     alertEvent
       (\val -> "The button was clicked; the event contained: " ++ show val)
       buttonEvWithLocalVal
+
+  tutorialSection $ do
+    -- Dynamic values.
+    text "Enter your name: "
+
+    nameInput :: TextInput t <- textInput def
+
+    let nameDyn :: Dynamic t Text
+        nameDyn = _textInput_value nameInput
+
+    text " Your name is: "
+    dynText nameDyn
+
+    divClass "age" $ do
+      text "And age: "
+      ageDyn <- _textInput_value <$> textInput def
+
+      -- `Dynamic`s are Applicative; that way you can combine them.
+      dynText $
+        (\n a -> n <> " is " <> a) <$> nameDyn <*> ageDyn
+
+    -- There are lots of other interesting Events and
+    -- Dynamics on `TextInput` widgets, for example:
+    --   _textInput_value :: Dynamic t Text    -- contents
+    --   _textInput_keypress :: Event t Int    -- when a key is pressed
+    --   _textInput_hasFocus :: Dynamic t Bool
+
+    -- Having this pure `TextInput` type to pass around,
+    -- containing various Events and Dynamics other parts of
+    -- the code can react to, is a nice and composable design
+    -- approach to GUI programming.
