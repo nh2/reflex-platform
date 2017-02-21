@@ -14,6 +14,7 @@
 --   reflex-dom: https://github.com/reflex-frp/reflex-dom/blob/develop/Quickref.md
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wall #-}
 
@@ -52,6 +53,12 @@ foreign import javascript unsafe
 
 showText :: (Show a) => a -> Text
 showText = T.pack . show
+
+
+dynButton :: (MonadWidget t m) => Dynamic t Text -> m (Event t ())
+dynButton textDyn = do
+  (e, _) <- el' "button" (dynText textDyn)
+  return $ domEvent Click e
 
 
 main :: IO ()
@@ -195,3 +202,29 @@ myWidgets = do
     sumDyn <- foldDyn (+) 0 anyButtonEv
 
     dynText (showText <$> sumDyn)
+
+
+  tutorialSection $ do
+    -- Dependency loops.
+    --
+    -- So far our data flow was always one-directional
+    -- (e.g. textbox to displayed text).
+    -- A Monad captures this well with sequential `do`
+    -- notation, where values can syntactically only refer
+    -- to earlier declared values.
+    -- But sometimes two Dynamic values must depend on
+    -- each other -- a loop!
+    -- This is possible using MonadFix and `rec` notation
+    -- (`RecursiveDo`).
+
+    rec
+      textDyn <- _textInput_value <$> textInput def{
+                   _textInputConfig_setValue = clearEvent
+                 }
+      buttonEv <- dynButton (("Clear: " <>) <$> textDyn)
+      let clearEvent = const "" <$> buttonEv
+
+      -- Notice how `textDyn` depends on `clearEvent`
+      -- defined *below* it. `rec` makes it possible.
+
+    return ()
