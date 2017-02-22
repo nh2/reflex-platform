@@ -13,17 +13,22 @@
 --   reflex:     https://github.com/reflex-frp/reflex/blob/develop/Quickref.md
 --   reflex-dom: https://github.com/reflex-frp/reflex-dom/blob/develop/Quickref.md
 
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wall #-}
 
 -- Library imports
+import           Control.Monad (when)
 import           Control.Monad.IO.Class
 import           Data.Default (def)
+import           Data.Functor (($>))
+import qualified Data.Map as Map
 import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Traversable (for)
 -- GHCJS specific imports
 import           GHCJS.Types (JSString)
 import           GHCJS.DOM.Types (toJSString)
@@ -59,6 +64,10 @@ dynButton :: (MonadWidget t m) => Dynamic t Text -> m (Event t ())
 dynButton textDyn = do
   (e, _) <- el' "button" (dynText textDyn)
   return $ domEvent Click e
+
+
+img :: (MonadWidget t m) => Text -> m ()
+img src = elAttr "img" ("src" =: src) (return ())
 
 
 main :: IO ()
@@ -228,3 +237,85 @@ myWidgets = do
       -- defined *below* it. `rec` makes it possible.
 
     return ()
+
+
+  tutorialSection $ do
+    -- Making widgets:
+    --   Bundling state, behaviour and styling in reusable
+    --   components, then composing them.
+
+    -- A button that takes the given color when `isColored` is True.
+    let colorButton :: Text -> Text -> Dynamic t Bool -> m (Event t ())
+        colorButton label colorClass isColored = do
+          let classDyn = ffor isColored $ \case
+                True  -> colorClass <> " colored"
+                False -> colorClass
+          (e, _) <- elDynClass' "button" classDyn (text label)
+          return $ domEvent Click e
+
+    -- A button that can't be used unless `isEnabled` is True.
+    let disableableButton :: Text -> Dynamic t Bool -> m (Event t ())
+        disableableButton label isEnabled = do
+          let attrsDyn = ffor isEnabled $ \case
+                True  -> Map.empty
+                False -> Map.fromList [("disabled", "")]
+          (e, _) <- elDynAttr' "button" attrsDyn (text label)
+          return $ domEvent Click e
+
+    -- A question with yes/no answer buttons.
+    let questionWidget :: Text -> m (Dynamic t Bool)
+        questionWidget questionText = divClass "question" $ do
+          rec
+            divClass "questionText" $ text questionText
+            yesEv <- colorButton "Yes" "green"          answerDyn
+            noEv  <- colorButton "No"  "red"   (not <$> answerDyn)
+            answerDyn <- holdDyn False $
+              leftmost [ yesEv $> True, noEv $> False ]
+          return answerDyn
+
+    -- Some questions one needs to answer if before illegalizing
+    -- something.
+    let questions :: [Text]
+        questions =
+          [ "Have you checked with the senate?"
+          , "Have you checked that this would be popular with the people?"
+          , "Are you really sure?"
+          ]
+
+    let illegalizeWidget :: m ()
+        illegalizeWidget = do
+          text "What do you want to illegalize? "
+          whatDyn <- _textInput_value <$> textInput def
+
+          answerDyns <- for questions questionWidget
+          let answersDyn = sequence answerDyns :: Dynamic t [Bool]
+          let allYesDyn = and <$> answersDyn   :: Dynamic t  Bool
+
+       -- Or shorter
+       -- allYesDyn <- fmap and . sequence <$> for questions questionWidget
+
+          buttonEv <- disableableButton "Illegalize!" allYesDyn
+
+          currentlyIllegalDyn :: Dynamic t Text <-
+            holdDyn "" (tagPromptlyDyn whatDyn buttonEv)
+
+          let renderImageDyn :: Dynamic t (m ())
+              renderImageDyn  =
+                ffor currentlyIllegalDyn $ \what -> do
+                  when (what /= "") $ do
+                    divClass "illegal" $ do
+                      img "http://hepwori.github.io/execorder/index.jpg"
+                      divClass "illegalText" $ text (what <> " is now illegal.")
+
+          -- So far all elements we've put on the page were static.
+          -- `dyn` performs dynamic element rendering.
+          -- Notice the type of `renderImageDyn`, it has an `m`
+          -- (the widget creation Monad) inside the Dynamic.
+          _ <- dyn renderImageDyn
+
+          -- That way, when we enter nothing ("") into the text
+          -- box, the `img` tag disappears from the DOM.
+
+          return ()
+
+    illegalizeWidget

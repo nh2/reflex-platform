@@ -3,3 +3,46 @@
   margin: 1ex;
   padding: 1ex;
 }
+
+.green.colored {
+  background-color: green;
+}
+.red.colored {
+  background-color: red;
+}
+
+.question {
+  display: table-row;
+}
+.question .questionText {
+  display: table-cell;
+  padding-right: 1em;
+}
+.question .green {
+  display: table-cell;
+}
+.question .red {
+  display: table-cell;
+}
+
+.illegal {
+  position: relative;
+  height: 300px;
+}
+
+.illegal img {
+  height: 100%;
+}
+
+.illegal .illegalText {
+  transform: skewY(7deg) skewX(0deg) rotateY(3deg) rotateX(3deg) rotateZ(0.6deg);
+  position: absolute;
+  left: 140px;
+  top: 120px;
+  width: 90px;
+  height: 120px;
+  text-shadow: 0 0 1px black;
+  color: transparent;
+  font-family: monospace;
+  font-size: 14px;
+}
